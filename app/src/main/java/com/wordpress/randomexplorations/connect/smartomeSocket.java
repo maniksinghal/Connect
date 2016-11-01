@@ -39,6 +39,7 @@ public class smartomeSocket extends iotDevice {
     }
 
     public boolean initiate_discovery(discoveryProtocol prot) {
+        int i = 0;
         try {
             prot.dgram_sock =
                     new DatagramSocket(SMARTOME_SOCKET_DISCOVERY_PORT, InetAddress.getByName("0.0.0.0"));
@@ -47,9 +48,15 @@ public class smartomeSocket extends iotDevice {
 
             String message = "Probe#2016-09-24-09-05-48-6";
             byte[] sendData = message.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, prot.myBroadcastAddress, SMARTOME_SOCKET_DISCOVERY_PORT);
-            prot.dgram_sock.send(sendPacket);
-            Log.d("this", "Sent probe for nearby Smartome devices");
+
+            // Send 2 requests for redundancy
+            while (i < 2) {
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, prot.myBroadcastAddress, SMARTOME_SOCKET_DISCOVERY_PORT);
+                prot.dgram_sock.send(sendPacket);
+                i = i + 1;
+                Log.d("this", "Sent probe " + String.valueOf(i) + " for nearby Smartome devices");
+                Thread.sleep(200, 0);
+            }
 
         } catch (Exception e) {
             Log.d("this", "Exception during Smartome Socket initiate_discovery: " + e.getMessage());
