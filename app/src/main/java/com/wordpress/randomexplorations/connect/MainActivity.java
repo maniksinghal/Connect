@@ -21,7 +21,10 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -141,10 +144,33 @@ public class MainActivity extends AppCompatActivity {
 
     private InetAddress getBroadcastAddress() {
         try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+
+            while (interfaces.hasMoreElements())
+            {
+                NetworkInterface networkInterface = interfaces.nextElement();
+
+                if (networkInterface.isLoopback())
+                    continue; // Don't want to broadcast to the loopback interface
+
+                for (InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses())
+                {
+                    InetAddress broadcast = interfaceAddress.getBroadcast();
+
+                    // Android seems smart enough to set to null broadcast to
+                    //  the external mobile network. It makes sense since Android
+                    //  silently drop UDP broadcasts involving external mobile network.
+                    if (broadcast == null)
+                        continue;
+
+                    return broadcast;
+                }
+            }
+            /*
             WifiManager myWifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
             DhcpInfo myDhcpInfo = myWifiManager.getDhcpInfo();
             if (myDhcpInfo == null) {
-                System.out.println("Could not get broadcast address");
+                Log.d("this", "Could not get broadcast address");
                 return null;
             }
             int broadcast = (myDhcpInfo.ipAddress & myDhcpInfo.netmask)
@@ -152,11 +178,14 @@ public class MainActivity extends AppCompatActivity {
             byte[] quads = new byte[4];
             for (int k = 0; k < 4; k++)
                 quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
-            return InetAddress.getByAddress(quads);
+            return InetAddress.getByAddress(quads); */
         } catch (Exception e) {
             Log.d("this", "Exception getting broadcast: " + e.getMessage());
             return null;
         }
+
+        Log.d("this", "Could not get my broadcast address: ");
+        return null;
     }
 
     private class DeviceUpdater extends AsyncTask<iotDevice, Void, iotDevice> {
